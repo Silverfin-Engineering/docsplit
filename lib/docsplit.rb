@@ -13,7 +13,7 @@ module Docsplit
   ESCAPED_ROOT  = ESCAPE[ROOT]
 
   METADATA_KEYS = [:author, :date, :creator, :keywords, :producer, :subject, :title, :length]
-  
+
   GM_FORMATS    = ["image/gif", "image/jpeg", "image/png", "image/x-ms-bmp", "image/svg+xml", "image/tiff", "image/x-portable-bitmap", "application/postscript", "image/x-portable-pixmap"]
 
   DEPENDENCIES  = {:java => false, :gm => false, :pdftotext => false, :pdftk => false, :pdftailor => false, :tesseract => false, :osd => false}
@@ -40,6 +40,9 @@ module Docsplit
   # broke.
   class ExtractionFailed < StandardError; end
 
+  # Raise an TimeoutError when running external tool timeouts.
+  class TimeoutError < StandardError; end
+
   # Use the ExtractPages Java class to burst a PDF into single pages.
   def self.extract_pages(pdfs, opts={})
     pdfs = ensure_pdfs(pdfs)
@@ -52,6 +55,11 @@ module Docsplit
     TextExtractor.new.extract(pdfs, opts)
   end
 
+  def self.extract_text_with_timeouts(pdfs, timeout, item_timeout, opts={})
+    pdfs = ensure_pdfs(pdfs)
+    TextExtractor.new(timeout, item_timeout).extract(pdfs, opts)
+  end
+
   # Use the ExtractImages Java class to rasterize a PDF into each page's image.
   def self.extract_images(pdfs, opts={})
     pdfs = ensure_pdfs(pdfs)
@@ -59,10 +67,20 @@ module Docsplit
     ImageExtractor.new.extract(pdfs, opts)
   end
 
+  def self.extract_images_with_timeouts(pdfs, timeout, item_timeout, opts={})
+    pdfs = ensure_pdfs(pdfs)
+    opts[:pages] = normalize_value(opts[:pages]) if opts[:pages]
+    ImageExtractor.new(timeout, item_timeout).extract(pdfs, opts)
+  end
+
   # Use JODCConverter to extract the documents as PDFs.
   # If the document is in an image format, use GraphicsMagick to extract the PDF.
   def self.extract_pdf(docs, opts={})
     PdfExtractor.new.extract(docs, opts)
+  end
+
+  def self.extract_pdf_with_timeout(docs, timeout, opts={})
+    PdfExtractor.new(timeout).extract(docs, opts)
   end
 
   # Define custom methods for each of the metadata keys that we support.
@@ -75,7 +93,7 @@ module Docsplit
       end
     EOS
   end
-  
+
   def self.extract_info(pdfs, opts={})
     pdfs = ensure_pdfs(pdfs)
     InfoExtractor.new.extract_all(pdfs, opts)

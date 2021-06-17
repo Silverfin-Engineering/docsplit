@@ -9,17 +9,23 @@ module Docsplit
     DEFAULT_FORMAT  = :png
     DEFAULT_DENSITY = '150'
 
+    def initialize(timeout = nil, item_timeout = nil)
+      @timeout = timeout
+      @item_timeout = item_timeout
+    end
 
     # Extract a list of PDFs as rasterized page images, according to the
     # configuration in options.
     def extract(pdfs, options)
-      @pdfs = [pdfs].flatten
-      extract_options(options)
-      @pdfs.each do |pdf|
-        previous = nil
-        @sizes.each_with_index do |size, i|
-          @formats.each {|format| convert(pdf, size, format, previous) }
-          previous = size if @rolling
+      Timeout.timeout(@timeout, Docsplit::TimeoutError) do
+        @pdfs = [pdfs].flatten
+        extract_options(options)
+        @pdfs.each do |pdf|
+          previous = nil
+          @sizes.each_with_index do |size, i|
+            @formats.each {|format| convert(pdf, size, format, previous) }
+            previous = size if @rolling
+          end
         end
       end
     end
@@ -45,11 +51,11 @@ module Docsplit
         # By filtering these we avoid memory bloat when the executing process tries to capture stdout.
         # See https://github.com/GetSilverfin/silverfin/issues/1998
 
-        run("gm mogrify #{common} -unsharp 0x0.5+0.75 \"#{directory}/*.#{format}\" 2>&1", env)
+        run("gm mogrify #{common} -unsharp 0x0.5+0.75 \"#{directory}/*.#{format}\" 2>&1", env, @timeout)
       else
         page_list(pages).each do |page|
           out_file = ESCAPE[File.join(directory, "#{basename}_#{page}.#{format}")]
-          run("gm convert +adjoin -define pdf:use-cropbox=true #{common} #{escaped_pdf}[#{page - 1}] #{out_file} 2>&1", env)
+          run("gm convert +adjoin -define pdf:use-cropbox=true #{common} #{escaped_pdf}[#{page - 1}] #{out_file} 2>&1", env, @item_timeout)
         end
       end
     ensure
@@ -101,7 +107,6 @@ module Docsplit
         end
       }.flatten.uniq.sort
     end
-
   end
 
 end
