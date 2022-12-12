@@ -23,6 +23,20 @@ class ExtractInfoTest < Minitest::Test
     assert 2 == Docsplit.extract_length('test/fixtures/obama_arts.pdf')
   end
 
+  def test_encrypted
+    assert "RC4 128-bit" == Docsplit.extract_encrypted('test/fixtures/encrypted.pdf')
+  end
+
+  def test_permissions
+    expected_permissions_hash = {"print"=>false, "copy"=>false, "change"=>true, "addNotes"=>true}
+    assert_equal expected_permissions_hash, Docsplit.extract_permissions('test/fixtures/encrypted.pdf')
+  end
+
+  def test_permissions_on_non_encrypted_file
+    expected_permissions_hash = {"print"=>true, "copy"=>true, "change"=>true, "addNotes"=>true}
+    assert_equal expected_permissions_hash, Docsplit.extract_permissions('test/fixtures/obama_veterans.doc')
+  end
+
   def test_producer
     assert "Mac OS X 10.6.2 Quartz PDFContext" == Docsplit.extract_producer('test/fixtures/encrypted.pdf')
   end
@@ -49,7 +63,8 @@ class ExtractInfoTest < Minitest::Test
     assert metadata[:producer] == "Acrobat Distiller 8.1.0 (Windows)"
     assert metadata[:title] == "Microsoft Word - Fact Sheet Arts 112907 FINAL.doc"
     assert metadata[:length] == 2
-    assert metadata.length == 6
+    assert metadata[:encrypted] == 'no'
+    assert metadata.length == 7
   end
 
 end
