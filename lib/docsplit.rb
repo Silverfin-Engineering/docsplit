@@ -12,7 +12,7 @@ module Docsplit
   ROOT          = File.expand_path(File.dirname(__FILE__) + '/..')
   ESCAPED_ROOT  = ESCAPE[ROOT]
 
-  METADATA_KEYS = [:author, :date, :creator, :keywords, :producer, :subject, :title, :length]
+  METADATA_KEYS = [:author, :date, :creator, :keywords, :producer, :subject, :title, :length, :encrypted]
 
   GM_FORMATS    = ["image/gif", "image/jpeg", "image/png", "image/x-ms-bmp", "image/svg+xml", "image/tiff", "image/x-portable-bitmap", "application/postscript", "image/x-portable-pixmap"]
 
@@ -102,6 +102,18 @@ module Docsplit
   # Utility method to clean OCR'd text with garbage characters.
   def self.clean_text(text)
     TextCleaner.new.clean(text)
+  end
+
+  def self.extract_permissions(pdfs, opts={})
+    pdfs = ensure_pdfs(pdfs)
+    permissions = InfoExtractor.new.extract(:permissions, pdfs, opts)
+
+    return {"print"=>true, "copy"=>true, "change"=>true, "addNotes"=>true} if permissions.nil?
+
+    permissions.split(" ").map do |permission_pair|
+      key, value = permission_pair.split(":")
+      [key, value == 'yes']
+    end.to_h
   end
 
   private

@@ -15,7 +15,7 @@ Usage:
   Main commands:
     pages, images, text, pdf.
   Metadata commands:
-    author, date, creator, keywords, producer, subject, title, length.
+    author, date, creator, keywords, producer, subject, title, length, encrypted, permissions.
 
 Example:
   docsplit images --size 700x --format jpg document.pdf
