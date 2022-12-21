@@ -24,7 +24,8 @@ class ExtractInfoTest < Minitest::Test
   end
 
   def test_encrypted
-    assert "RC4 128-bit" == Docsplit.extract_encrypted('test/fixtures/encrypted.pdf')
+    assert_equal true, Docsplit.extract_encrypted('test/fixtures/encrypted.pdf')
+    assert_equal false, Docsplit.extract_encrypted('test/fixtures/obama_arts.pdf')
   end
 
   def test_permissions
