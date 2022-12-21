@@ -12,11 +12,14 @@ module Docsplit
   ROOT          = File.expand_path(File.dirname(__FILE__) + '/..')
   ESCAPED_ROOT  = ESCAPE[ROOT]
 
-  METADATA_KEYS = [:author, :date, :creator, :keywords, :producer, :subject, :title, :length, :encrypted]
+  METADATA_KEYS = [:author, :date, :creator, :keywords, :producer, :subject, :title, :length]
 
   GM_FORMATS    = ["image/gif", "image/jpeg", "image/png", "image/x-ms-bmp", "image/svg+xml", "image/tiff", "image/x-portable-bitmap", "application/postscript", "image/x-portable-pixmap"]
 
   DEPENDENCIES  = {:java => false, :gm => false, :pdftotext => false, :pdftk => false, :pdftailor => false, :tesseract => false, :osd => false}
+
+  PEMRISSIONS_PATTERN = /(?<=\().+?(?=\))/
+  DEFAULT_PERMISSION = {"print"=>true, "copy"=>true, "change"=>true, "addNotes"=>true}
 
   # Check for all dependencies, and note their absence.
   dirs = ENV['PATH'].split(File::PATH_SEPARATOR)
@@ -104,16 +107,27 @@ module Docsplit
     TextCleaner.new.clean(text)
   end
 
+  def self.extract_encrypted(pdfs, opts={})
+    pdfs = ensure_pdfs(pdfs)
+    encrypted = InfoExtractor.new.extract(:encrypted, pdfs, opts)
+
+    return encrypted.strip != 'no'
+  end
+
   def self.extract_permissions(pdfs, opts={})
+    return DEFAULT_PERMISSION unless self.extract_encrypted(pdfs, opts)
+
     pdfs = ensure_pdfs(pdfs)
     permissions = InfoExtractor.new.extract(:permissions, pdfs, opts)
 
-    return {"print"=>true, "copy"=>true, "change"=>true, "addNotes"=>true} if permissions.nil?
+    if !permissions
+      permissions = InfoExtractor.new.extract(:encrypted, pdfs, opts).match(PEMRISSIONS_PATTERN)[0]
+    end
 
     permissions.split(" ").map do |permission_pair|
       key, value = permission_pair.split(":")
       [key, value == 'yes']
-    end.to_h
+    end.to_h.slice(*DEFAULT_PERMISSION.keys)
   end
 
   private
