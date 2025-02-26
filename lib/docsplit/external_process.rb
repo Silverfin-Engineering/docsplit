@@ -15,7 +15,7 @@ module Docsplit
       # - Run through bash so we can use PIPESTATUS
       # - Use PIPESTATUS to return the exit status of #{command} instead of `uniq`
       result = `bash -c '#{run_command}; exit ${PIPESTATUS[0]}'`.chomp
-      exit_code = $? >> 8
+      exit_code = $?.exitstatus
 
       raise TimeoutError, run_command if exit_code == 137
       raise ExtractionFailed, result if exit_code != 0
