@@ -2,6 +2,7 @@ module Docsplit
 
   # Delegates to **pdfinfo** in order to extract information about a PDF file.
   class InfoExtractor
+    include ExternalProcess
 
     # Regex matchers for different bits of information.
     MATCHERS = {
@@ -24,9 +25,7 @@ module Docsplit
     
     def extract_all(pdfs, opts)
       pdf = [pdfs].flatten.first
-      cmd = "pdfinfo #{ESCAPE[pdf]} 2>&1"
-      result = `#{cmd}`.chomp
-      raise ExtractionFailed, result if $? != 0
+      result = run("pdfinfo #{ESCAPE[pdf]}")
       # ruby  1.8 (iconv) and 1.9 (String#encode) :
       if String.method_defined?(:encode)
         result.encode!('UTF-8', 'binary', :invalid => :replace, :undef => :replace, :replace => "") unless result.valid_encoding?

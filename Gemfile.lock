@@ -1,0 +1,58 @@
+GIT
+  remote: https://github.com/Silverfin-Engineering/open3_safe.git
+  revision: 5badbe14e94bd01d4420fc13ee9a1f129d78b182
+  ref: 5badbe14e94bd01d4420fc13ee9a1f129d78b182
+  specs:
+    open3_safe (0.1.0)
+      get_process_mem
+
+PATH
+  remote: .
+  specs:
+    docsplit (0.7.6)
+      open3_safe
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    bigdecimal (4.1.1)
+    drb (2.2.3)
+    ffi (1.17.4)
+    ffi (1.17.4-aarch64-linux-gnu)
+    ffi (1.17.4-aarch64-linux-musl)
+    ffi (1.17.4-arm-linux-gnu)
+    ffi (1.17.4-arm-linux-musl)
+    ffi (1.17.4-arm64-darwin)
+    ffi (1.17.4-x86-linux-gnu)
+    ffi (1.17.4-x86-linux-musl)
+    ffi (1.17.4-x86_64-darwin)
+    ffi (1.17.4-x86_64-linux-gnu)
+    ffi (1.17.4-x86_64-linux-musl)
+    get_process_mem (1.0.0)
+      bigdecimal (>= 2.0)
+      ffi (~> 1.0)
+    minitest (6.0.4)
+      drb (~> 2.0)
+      prism (~> 1.5)
+    prism (1.9.0)
+
+PLATFORMS
+  aarch64-linux-gnu
+  aarch64-linux-musl
+  arm-linux-gnu
+  arm-linux-musl
+  arm64-darwin
+  ruby
+  x86-linux-gnu
+  x86-linux-musl
+  x86_64-darwin
+  x86_64-linux-gnu
+  x86_64-linux-musl
+
+DEPENDENCIES
+  docsplit!
+  minitest (~> 6.0)
+  open3_safe!
+
+BUNDLED WITH
+   2.6.6
