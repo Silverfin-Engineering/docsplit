@@ -8,6 +8,7 @@ module Docsplit
     MEMORY_ARGS     = "-limit memory 256MiB -limit map 512MiB"
     DEFAULT_FORMAT  = :png
     DEFAULT_DENSITY = '150'
+    MAX_RSS = 512 * 1024 * 1024
 
     def initialize(timeout = nil, item_timeout = nil)
       @timeout = timeout
@@ -42,20 +43,16 @@ module Docsplit
       pages     = @pages || '1-' + Docsplit.extract_length(pdf).to_s
       escaped_pdf = ESCAPE[pdf]
       FileUtils.mkdir_p(directory) unless File.exist?(directory)
-      env = "MAGICK_TMPDIR=#{tempdir} OMP_NUM_THREADS=2"
+      env = { "MAGICK_TMPDIR" => tempdir, "OMP_NUM_THREADS" => "2" }
       common = "#{MEMORY_ARGS} -density #{@density} #{resize_arg(size)} #{quality_arg(format)}"
 
       if previous
         FileUtils.cp(Dir[directory_for(previous) + '/*'], directory)
-        # We're adding `| grep -v '^$' | uniq` here and below because if a corrupt PDF is parsed, it generates an infinite amount of identical warnings (with blank lines in between).
-        # By filtering these we avoid memory bloat when the executing process tries to capture stdout.
-        # See https://github.com/GetSilverfin/silverfin/issues/1998
-
-        run("gm mogrify #{common} -unsharp 0x0.5+0.75 \"#{directory}/*.#{format}\" 2>&1", env, @timeout)
+        run("gm mogrify #{common} -unsharp 0x0.5+0.75 \"#{directory}/*.#{format}\"", env, @timeout, max_rss: MAX_RSS)
       else
         page_list(pages).each do |page|
           out_file = ESCAPE[File.join(directory, "#{basename}_#{page}.#{format}")]
-          run("gm convert +adjoin -define pdf:use-cropbox=true #{common} #{escaped_pdf}[#{page - 1}] #{out_file} 2>&1", env, @item_timeout)
+          run("gm convert +adjoin -define pdf:use-cropbox=true #{common} #{escaped_pdf}[#{page - 1}] #{out_file}", env, @item_timeout, max_rss: MAX_RSS)
         end
       end
     ensure

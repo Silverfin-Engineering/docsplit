@@ -7,6 +7,8 @@ module Docsplit
     @@executable     = nil
     @@version_string = nil
 
+    MAX_RSS = 2 * 1024 * 1024 * 1024
+
     def initialize(timeout = nil)
       @timeout = timeout
     end
@@ -27,10 +29,9 @@ module Docsplit
     # of the office software to be used for extraction.
     def version_string
       unless @@version_string
-        null = windows? ? "NUL" : "/dev/null"
-        @@version_string = `#{office_executable} -h 2>#{null}`.split("\n").first
+        @@version_string = (run("#{office_executable} -h") rescue '').split("\n").first
         if !!@@version_string.to_s.match(/[0-9]*/)
-          @@version_string = `#{office_executable} --version`.split("\n").first
+          @@version_string = (run("#{office_executable} --version") rescue '').split("\n").first
         end
       end
       @@version_string
@@ -129,8 +130,8 @@ module Docsplit
           basename = File.basename(doc, ext)
           escaped_doc, escaped_out, escaped_basename = [doc, out, basename].map(&ESCAPE)
 
-          if GM_FORMATS.include?(`file -b --mime #{ESCAPE[doc]}`.strip.split(/[:;]\s+/)[0])
-            `gm convert #{escaped_doc} #{escaped_out}/#{escaped_basename}.pdf`
+          if GM_FORMATS.include?(run("file -b --mime #{ESCAPE[doc]}").strip.split(/[:;]\s+/)[0])
+            run("gm convert #{escaped_doc} #{escaped_out}/#{escaped_basename}.pdf", {}, @timeout, max_rss: MAX_RSS)
           else
             if libre_office?
               # Set the LibreOffice user profile, so that parallel uses of cloudcrowd don't trip over each other.
@@ -138,9 +139,8 @@ module Docsplit
                 ENV['SYSUSERCONFIG']="file://#{tmp_sys_dir}"
 
                 options = "--headless --invisible  --norestore --nolockcheck --convert-to pdf --outdir #{escaped_out} #{escaped_doc}"
-                cmd = "#{office_executable} #{options} 2>&1"
-                result = run(cmd, "", @timeout)
-                raise ExtractionFailed, result if $? != 0
+                cmd = "#{office_executable} #{options}"
+                run(cmd, {}, @timeout, max_rss: MAX_RSS)
               end
               true
             else # open office presumably, rely on JODConverter to figure it out.
@@ -165,9 +165,8 @@ module Docsplit
 
       pdfs   = [pdfs].flatten.map{|pdf| "\"#{pdf}\""}.join(' ')
       office = osx? ? "-Doffice.home=#{office_path}" : office_path
-      cmd    = "java #{HEADLESS} #{LOGGING} #{office} -cp #{CLASSPATH} #{command} #{pdfs} 2>&1"
-      result = run(cmd, "", @timeout)
-      raise ExtractionFailed, result if $? != 0
+      cmd    = "java #{HEADLESS} #{LOGGING} #{office} -cp #{CLASSPATH} #{command} #{pdfs}"
+      result = run(cmd, {}, @timeout, max_rss: MAX_RSS)
       return return_output ? (result.empty? ? nil : result) : true
     end
 

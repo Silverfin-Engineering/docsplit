@@ -2,6 +2,10 @@ require 'tmpdir'
 require 'fileutils'
 require 'shellwords'
 
+# Loaded ahead of the module body so the load-time OSD probe can use
+# ExternalProcess.run instead of a raw backtick.
+require File.expand_path(File.dirname(__FILE__) + '/docsplit/external_process')
+
 # The Docsplit module delegates to the Java PDF extractors.
 module Docsplit
 
@@ -21,6 +25,13 @@ module Docsplit
   PEMRISSIONS_PATTERN = /(?<=\().+?(?=\))/
   DEFAULT_PERMISSION = {"print"=>true, "copy"=>true, "change"=>true, "addNotes"=>true}
 
+  # Raise an ExtractionFailed exception when the PDF is encrypted, or otherwise
+  # broke.
+  class ExtractionFailed < StandardError; end
+
+  # Raise an TimeoutError when running external tool timeouts.
+  class TimeoutError < StandardError; end
+
   # Check for all dependencies, and note their absence.
   dirs = ENV['PATH'].split(File::PATH_SEPARATOR)
   DEPENDENCIES.each_key do |dep|
@@ -34,17 +45,10 @@ module Docsplit
 
   # if tesseract is found check for the osd plugin so that we can do orientation independent OCR.
   if DEPENDENCIES[:tesseract]
-    # osd will be listed in tesseract --listlangs
-    val = %x[ #{'tesseract --list-langs'} 2>&1 >/dev/null ]
+    # osd will be listed in tesseract --list-langs
+    val = ExternalProcess.run("tesseract --list-langs") rescue ""
     DEPENDENCIES[:osd] = true if val =~ /\bosd\b/
   end
-
-    # Raise an ExtractionFailed exception when the PDF is encrypted, or otherwise
-  # broke.
-  class ExtractionFailed < StandardError; end
-
-  # Raise an TimeoutError when running external tool timeouts.
-  class TimeoutError < StandardError; end
 
   # Use the ExtractPages Java class to burst a PDF into single pages.
   def self.extract_pages(pdfs, opts={})
@@ -144,7 +148,6 @@ module Docsplit
 
 end
 
-require "#{Docsplit::ROOT}/lib/docsplit/external_process"
 require "#{Docsplit::ROOT}/lib/docsplit/image_extractor"
 require "#{Docsplit::ROOT}/lib/docsplit/transparent_pdfs"
 require "#{Docsplit::ROOT}/lib/docsplit/text_extractor"
