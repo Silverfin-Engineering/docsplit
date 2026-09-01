@@ -28,6 +28,18 @@ class ConvertToPdfTest < Minitest::Test
     assert Dir["#{OUTPUT}/*.pdf"].length == 8
   end
 
+  def test_env_reaches_the_conversion_process
+    Docsplit.extract_pdf('test/fixtures/locale_specific_dates.xlsx', :output => OUTPUT, :env => {'LC_ALL' => 'en_GB.UTF-8'})
+    Docsplit.extract_text("#{OUTPUT}/locale_specific_dates.pdf", :output => OUTPUT)
+    assert_includes File.read("#{OUTPUT}/locale_specific_dates.txt"), '03/04/2019'
+
+    clear_output
+
+    Docsplit.extract_pdf('test/fixtures/locale_specific_dates.xlsx', :output => OUTPUT, :env => {'LC_ALL' => 'en_US.UTF-8'})
+    Docsplit.extract_text("#{OUTPUT}/locale_specific_dates.pdf", :output => OUTPUT)
+    assert_includes File.read("#{OUTPUT}/locale_specific_dates.txt"), '4/3/2019'
+  end
+
   def test_name_escaping_while_converting
     Docsplit.extract_pdf('test/fixtures/PDF file with spaces \'single\' and "double quotes".doc', :output => OUTPUT)
     assert Dir["#{OUTPUT}/*.pdf"] == ["#{OUTPUT}/PDF file with spaces 'single' and \"double quotes\".pdf"]
