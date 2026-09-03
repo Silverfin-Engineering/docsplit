@@ -121,7 +121,12 @@ module Docsplit
     end
 
     # Convert documents to PDF.
+    #
+    # opts[:env] - Hash of extra environment variables for the conversion
+    # commands. Mutating ENV at runtime does not work here: run spawns inside
+    # Bundler.with_original_env, which restores the boot-time environment.
     def extract(docs, opts)
+      env = opts[:env] || {}
       Timeout.timeout(@timeout, Docsplit::TimeoutError) do
         out = opts[:output] || '.'
         FileUtils.mkdir_p out unless File.exist?(out)
@@ -131,16 +136,14 @@ module Docsplit
           escaped_doc, escaped_out, escaped_basename = [doc, out, basename].map(&ESCAPE)
 
           if GM_FORMATS.include?(run("file -b --mime #{ESCAPE[doc]}").strip.split(/[:;]\s+/)[0])
-            run("gm convert #{escaped_doc} #{escaped_out}/#{escaped_basename}.pdf", {}, @timeout, max_rss: MAX_RSS)
+            run("gm convert #{escaped_doc} #{escaped_out}/#{escaped_basename}.pdf", env, @timeout, max_rss: MAX_RSS)
           else
             if libre_office?
               # Set the LibreOffice user profile, so that parallel uses of cloudcrowd don't trip over each other.
               Dir.mktmpdir do |tmp_sys_dir|
-                ENV['SYSUSERCONFIG']="file://#{tmp_sys_dir}"
-
                 options = "--headless --invisible  --norestore --nolockcheck --convert-to pdf --outdir #{escaped_out} #{escaped_doc}"
                 cmd = "#{office_executable} #{options}"
-                run(cmd, {}, @timeout, max_rss: MAX_RSS)
+                run(cmd, env.merge('SYSUSERCONFIG' => "file://#{tmp_sys_dir}"), @timeout, max_rss: MAX_RSS)
               end
               true
             else # open office presumably, rely on JODConverter to figure it out.
